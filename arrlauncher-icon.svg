@@ -1,0 +1,6 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="96" fill="#111111"/>
+  <!-- Double chevron "launch" mark -->
+  <path d="M 168 140 L 280 256 L 168 372" stroke="#4da3ff" stroke-width="44" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M 264 140 L 376 256 L 264 372" stroke="#4da3ff" stroke-width="44" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.55"/>
+</svg>
