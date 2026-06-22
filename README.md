@@ -1,8 +1,9 @@
 # ArrLauncher
 
 
-Link to pages: [ArrLauncher](https://sneakypickle69.github.io/ArrLauncher/arrlauncher.html#mode)
+Link to mobile site: [ArrLauncher mobile](https://sneakypickle69.github.io/ArrLauncher/arrlauncher.html)
 
+Link to desktop site: [ArrLauncher desktop](https://sneakypickle69.github.io/ArrLauncher/arrlauncherdesktop.html)
 
 A simple, single-file HTML launcher for self-hosted app web UIs (Sonarr, Radarr, Prowlarr, qBittorrent, etc.), built for use over a local network or [Tailscale](https://tailscale.com).
 
