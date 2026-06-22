@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Launcher</title>
-<link rel="icon" type="image/png" href="arrlauncher-icon.png">
 <link rel="manifest" href="manifest.json">
 <style>
   :root{
@@ -139,7 +138,7 @@
     <div class="field">
       <label>Icon URL (optional, overrides preset)</label>
       <input id="fIconUrl" placeholder="https://...png">
-      <a href="https://dashboardicons.com/icons" target="_blank" rel="noopener" class="browse-icons">Browse icon repo →</a>
+      <a href="https://dashboardicons.com/icons" rel="noopener" class="browse-icons">Browse icon repo →</a>
     </div>
     <div class="field">
       <label>Or upload icon image</label>
@@ -381,7 +380,7 @@ btnDelete.onclick = () => {
 };
 
 function safePush(state, hash){
-  try{ history.pushState(state, '', hash); }catch(e){}
+  try{ location.hash = hash; history.replaceState(state, '', hash); }catch(e){}
 }
 function safeReplace(state, hash){
   try{ history.replaceState(state, '', hash); }catch(e){}
