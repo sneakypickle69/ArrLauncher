@@ -313,12 +313,12 @@ document.getElementById('btnAdd').onclick = () => openModalWithHistory(null);
 // Modal logic
 const overlay = document.getElementById('modal-overlay');
 overlay.addEventListener('click', (e) => {
-  if(e.target === overlay){
-    closeModal();
+  if(e.target !== overlay) return;
 
-    if(history.state?.screen === 'modal'){
-      history.back();
-    }
+  if(history.state?.screen === 'modal'){
+    history.back();
+  } else {
+    closeModal();
   }
 });
 const fName = document.getElementById('fName');
@@ -352,10 +352,10 @@ function closeModal(){
   pickedFileData = null;
 }
 document.getElementById('btnCancel').onclick = () => {
-  closeModal();
-
   if(history.state?.screen === 'modal'){
     history.back();
+  } else {
+    closeModal();
   }
 };
 document.getElementById('btnPickFile').onclick = () => fIconFile.click();
@@ -388,12 +388,13 @@ document.getElementById('btnSave').onclick = () => {
   } else {
     apps.push({ id: Date.now().toString(), name, port, icon });
   }
-  saveApps(apps);
+saveApps(apps);
 renderApps();
-closeModal();
 
 if(history.state?.screen === 'modal'){
   history.back();
+} else {
+  closeModal();
 }
 };
 btnDelete.onclick = () => {
@@ -401,22 +402,22 @@ btnDelete.onclick = () => {
     deleteApp(editingId);
   }
 
-  closeModal();
-
   if(history.state?.screen === 'modal'){
     history.back();
+  } else {
+    closeModal();
   }
 };
 
 function safePush(state){
   try{
-    history.pushState(state, '');
+    history.pushState(state, '', location.pathname);
   }catch(e){}
 }
 
 function safeReplace(state){
   try{
-    history.replaceState(state, '');
+    history.replaceState(state, '', location.pathname);
   }catch(e){}
 }
 
@@ -449,8 +450,10 @@ window.addEventListener('popstate', (e) => {
   }
 });
 
-// Always reset to mode-select on open/reload
-safeReplace({ screen: 'mode' });
+// Initialize history only once
+if (!history.state) {
+  safeReplace({ screen: 'mode' });
+}
 showScreen(modeScreen);
 </script>
 </body>
