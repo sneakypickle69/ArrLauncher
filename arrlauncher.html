@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Launcher</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTGFidW5jaGVyIiwic2hvcnRfbmFtZSI6IkxhdW5jaGVyIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMxMTEiLCJ0aGVtZV9jb2xvciI6IiMxMTEifQ==">
+<style>
+  :root{
+    --bg:#111; --bg2:#1c1c1c; --card:#222; --accent:#4da3ff; --text:#eee; --muted:#888; --danger:#e05656;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    min-height:100vh;
+  }
+  .screen{ display:none; min-height:100vh; flex-direction:column; }
+  .screen.active{ display:flex; }
+
+  /* Mode select screen */
+  #mode-screen{ align-items:center; justify-content:center; gap:24px; padding:24px; }
+  .mode-btn{
+    width:100%; max-width:320px; padding:32px 16px; font-size:1.4rem; font-weight:600;
+    border:none; border-radius:16px; background:var(--card); color:var(--text);
+    cursor:pointer;
+  }
+  .mode-btn:active{ background:#2c2c2c; }
+  .mode-btn.local{ border:2px solid var(--accent); }
+  .mode-btn.remote{ border:2px solid #ffb14d; }
+
+  /* Main screen */
+  #main-screen{ padding:16px; padding-bottom:90px; }
+  .topbar{ display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .topbar .modeLabel{ font-size:0.85rem; color:var(--muted); padding:6px 10px; background:var(--card); border-radius:8px; }
+  .topbar button.back{ background:none; border:none; color:var(--accent); font-size:1rem; padding:6px; }
+
+  #ipRow{ display:flex; gap:8px; margin-bottom:18px; }
+  #ipInput{ flex:1; padding:12px; font-size:1rem; border-radius:10px; border:1px solid #333; background:var(--bg2); color:var(--text); }
+  #ipInput::placeholder{ color:var(--muted); }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:14px; }
+  .app-btn{
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    background:var(--card); border-radius:16px; padding:16px 8px;
+    cursor:pointer; border:none; color:var(--text); position:relative;
+  }
+  .app-btn:active{ background:#2c2c2c; }
+  .app-icon{ width:48px; height:48px; border-radius:12px; object-fit:cover; background:#333; display:flex; align-items:center; justify-content:center; font-size:1.4rem; font-weight:700; }
+  .app-name{ font-size:0.9rem; text-align:center; word-break:break-word; }
+  .edit-x{
+    position:absolute; top:4px; right:4px; width:24px; height:24px; border-radius:50%;
+    background:var(--danger); color:#fff; border:none; font-size:0.9rem; line-height:1; display:none;
+  }
+  .editing .edit-x{ display:block; }
+
+  .add-btn{
+    display:flex; align-items:center; justify-content:center;
+    background:var(--bg2); border:2px dashed #444; border-radius:16px;
+    font-size:2rem; color:var(--muted); cursor:pointer; min-height:96px;
+  }
+
+  .fab-bar{
+    position:fixed; bottom:16px; left:0; right:0; display:flex; justify-content:center; gap:12px;
+  }
+  .fab{
+    background:var(--accent); color:#fff; border:none; border-radius:30px;
+    padding:14px 22px; font-size:1rem; font-weight:600; cursor:pointer;
+  }
+  .fab.secondary{ background:var(--card); color:var(--text); }
+
+  /* Modal */
+  #modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
+    align-items:flex-end; justify-content:center; z-index:50;
+  }
+  #modal-overlay.active{ display:flex; }
+  #modal{
+    background:var(--bg2); width:100%; max-width:480px; border-radius:20px 20px 0 0;
+    padding:20px; max-height:88vh; overflow-y:auto;
+  }
+  #modal h2{ margin:0 0 14px; font-size:1.2rem; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:0.85rem; color:var(--muted); margin-bottom:6px; }
+  .field input{
+    width:100%; padding:12px; font-size:1rem; border-radius:10px; border:1px solid #333;
+    background:var(--bg); color:var(--text);
+  }
+  .icon-preview-row{ display:flex; align-items:center; gap:12px; margin-top:8px; }
+  .icon-preview{ width:48px; height:48px; border-radius:12px; background:#333; object-fit:cover; }
+  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
+  .modal-actions button{ flex:1; padding:14px; border-radius:12px; border:none; font-size:1rem; font-weight:600; cursor:pointer; }
+  .btn-save{ background:var(--accent); color:#fff; }
+  .btn-cancel{ background:var(--card); color:var(--text); }
+  .btn-delete{ background:var(--danger); color:#fff; }
+  .file-row{ display:flex; gap:8px; }
+  .file-row input[type=file]{ display:none; }
+  .file-row .pick-btn{ padding:12px 14px; border-radius:10px; border:1px solid #333; background:var(--card); color:var(--text); }
+  .browse-icons{ display:inline-block; margin-top:6px; font-size:0.85rem; color:var(--accent); text-decoration:none; }
+</style>
+</head>
+<body>
+
+<div id="mode-screen" class="screen active">
+  <button class="mode-btn local" id="btnLocal">Local Network</button>
+  <button class="mode-btn remote" id="btnRemote">Remote (Tailscale)</button>
+</div>
+
+<div id="main-screen" class="screen">
+  <div class="topbar">
+    <button class="back" id="btnSwitchMode">← Switch</button>
+    <span class="modeLabel" id="modeLabel"></span>
+  </div>
+
+  <div id="ipRow">
+    <input id="ipInput" placeholder="IP / hostname">
+  </div>
+
+  <div class="grid" id="appGrid"></div>
+
+  <div class="fab-bar">
+    <button class="fab secondary" id="btnEditToggle">Edit</button>
+    <button class="fab" id="btnAdd">+ Add App</button>
+  </div>
+</div>
+
+<div id="modal-overlay">
+  <div id="modal">
+    <h2 id="modalTitle">Add App</h2>
+    <div class="field">
+      <label>Name</label>
+      <input id="fName" placeholder="Sonarr">
+    </div>
+    <div class="field">
+      <label>Port</label>
+      <input id="fPort" placeholder="8989" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>Icon URL (optional, overrides preset)</label>
+      <input id="fIconUrl" placeholder="https://...png">
+      <a href="https://dashboardicons.com/icons" target="_blank" rel="noopener" class="browse-icons">Browse icon repo →</a>
+    </div>
+    <div class="field">
+      <label>Or upload icon image</label>
+      <div class="file-row">
+        <button type="button" class="pick-btn" id="btnPickFile">Choose file</button>
+        <input type="file" id="fIconFile" accept="image/*">
+        <img id="iconPreview" class="icon-preview" style="display:none;">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancel">Cancel</button>
+      <button class="btn-delete" id="btnDelete" style="display:none;">Delete</button>
+      <button class="btn-save" id="btnSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'launcher_apps_v1';
+
+const PRESET_ICONS = {
+  qbittorrent: 'https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/png/qbittorrent.png',
+  sonarr: 'https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/png/sonarr.png',
+  radarr: 'https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/png/radarr.png',
+  prowlarr: 'https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/png/prowlarr.png'
+};
+const PRESET_COLORS = {
+  qbittorrent: '#2c4c7c',
+  sonarr: '#1d2024',
+  radarr: '#ffc230',
+  prowlarr: '#1d2024'
+};
+
+function getApps(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }catch(e){ return []; }
+}
+function saveApps(apps){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(apps));
+}
+
+let editMode = false;
+let editingId = null;
+let pickedFileData = null;
+
+const modeScreen = document.getElementById('mode-screen');
+const mainScreen = document.getElementById('main-screen');
+const modeLabel = document.getElementById('modeLabel');
+const ipInput = document.getElementById('ipInput');
+const appGrid = document.getElementById('appGrid');
+
+function showScreen(el){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+document.getElementById('btnLocal').onclick = () => selectMode('local');
+document.getElementById('btnRemote').onclick = () => selectMode('remote');
+document.getElementById('btnSwitchMode').onclick = () => {
+  safeBack();
+};
+
+function selectMode(mode, fromPopstate){
+  window.currentMode = mode;
+  modeLabel.textContent = mode === 'local' ? 'Local Network' : 'Remote (Tailscale)';
+  ipInput.placeholder = mode === 'local' ? 'Local IP (e.g. 192.168.1.50)' : 'Tailscale IP / hostname';
+  const savedIp = localStorage.getItem(mode === 'local' ? 'local_ip' : 'tailscale_ip') || '';
+  ipInput.value = savedIp;
+  showScreen(mainScreen);
+  renderApps();
+  if(!fromPopstate){
+    safePush({ screen: 'main', mode }, '#' + mode);
+  }
+}
+
+ipInput.addEventListener('input', () => {
+  const key = window.currentMode === 'remote' ? 'tailscale_ip' : 'local_ip';
+  localStorage.setItem(key, ipInput.value.trim());
+});
+
+function presetKeyFor(name){
+  const n = name.toLowerCase();
+  for(const key in PRESET_ICONS){
+    if(n.includes(key)) return key;
+  }
+  return null;
+}
+
+function renderApps(){
+  const apps = getApps();
+  appGrid.innerHTML = '';
+  apps.forEach(app => {
+    const btn = document.createElement('button');
+    btn.className = 'app-btn' + (editMode ? ' editing' : '');
+    btn.onclick = (e) => {
+      if(editMode){ openModalWithHistory(app); return; }
+      launch(app);
+    };
+
+    const iconWrap = document.createElement('div');
+    const presetKey = presetKeyFor(app.name);
+    if(app.icon){
+      const img = document.createElement('img');
+      img.className = 'app-icon';
+      img.src = app.icon;
+      iconWrap.appendChild(img);
+    } else if(presetKey){
+      const img = document.createElement('img');
+      img.className = 'app-icon';
+      img.style.background = PRESET_COLORS[presetKey];
+      img.style.padding = '8px';
+      img.src = PRESET_ICONS[presetKey];
+      img.onerror = () => {
+        const div = document.createElement('div');
+        div.className = 'app-icon';
+        div.style.background = PRESET_COLORS[presetKey];
+        div.textContent = app.name.charAt(0).toUpperCase();
+        img.replaceWith(div);
+      };
+      iconWrap.appendChild(img);
+    } else {
+      const div = document.createElement('div');
+      div.className = 'app-icon';
+      div.textContent = app.name.charAt(0).toUpperCase();
+      iconWrap.appendChild(div);
+    }
+    btn.appendChild(iconWrap.firstChild);
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'app-name';
+    nameDiv.textContent = app.name;
+    btn.appendChild(nameDiv);
+
+    if(editMode){
+      const x = document.createElement('button');
+      x.className = 'edit-x';
+      x.textContent = '×';
+      x.onclick = (e) => { e.stopPropagation(); deleteApp(app.id); };
+      btn.appendChild(x);
+    }
+
+    appGrid.appendChild(btn);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-btn';
+  addBtn.textContent = '+';
+  addBtn.onclick = () => openModalWithHistory(null);
+  appGrid.appendChild(addBtn);
+}
+
+function launch(app){
+  const host = ipInput.value.trim();
+  if(!host){ alert('Enter an IP/hostname first.'); return; }
+  window.location.href = `http://${host}:${app.port}`;
+}
+
+function deleteApp(id){
+  let apps = getApps();
+  apps = apps.filter(a => a.id !== id);
+  saveApps(apps);
+  renderApps();
+}
+
+document.getElementById('btnEditToggle').onclick = () => {
+  editMode = !editMode;
+  document.getElementById('btnEditToggle').textContent = editMode ? 'Done' : 'Edit';
+  renderApps();
+};
+document.getElementById('btnAdd').onclick = () => openModalWithHistory(null);
+
+// Modal logic
+const overlay = document.getElementById('modal-overlay');
+const fName = document.getElementById('fName');
+const fPort = document.getElementById('fPort');
+const fIconUrl = document.getElementById('fIconUrl');
+const fIconFile = document.getElementById('fIconFile');
+const iconPreview = document.getElementById('iconPreview');
+const btnDelete = document.getElementById('btnDelete');
+const modalTitle = document.getElementById('modalTitle');
+
+function openModal(app){
+  editingId = app ? app.id : null;
+  pickedFileData = null;
+  modalTitle.textContent = app ? 'Edit App' : 'Add App';
+  fName.value = app ? app.name : '';
+  fPort.value = app ? app.port : '';
+  fIconUrl.value = (app && app.icon && !app.icon.startsWith('data:')) ? app.icon : '';
+  if(app && app.icon && app.icon.startsWith('data:')){
+    pickedFileData = app.icon;
+    iconPreview.src = app.icon;
+    iconPreview.style.display = 'block';
+  } else {
+    iconPreview.style.display = 'none';
+  }
+  btnDelete.style.display = app ? 'block' : 'none';
+  overlay.classList.add('active');
+}
+function closeModal(){
+  overlay.classList.remove('active');
+}
+document.getElementById('btnCancel').onclick = () => safeBack();
+document.getElementById('btnPickFile').onclick = () => fIconFile.click();
+fIconFile.onchange = () => {
+  const file = fIconFile.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    pickedFileData = e.target.result;
+    iconPreview.src = pickedFileData;
+    iconPreview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+};
+fIconUrl.addEventListener('input', () => {
+  if(fIconUrl.value.trim()){
+    pickedFileData = null;
+    iconPreview.style.display = 'none';
+  }
+});
+
+document.getElementById('btnSave').onclick = () => {
+  const name = fName.value.trim();
+  const port = fPort.value.trim();
+  if(!name || !port){ alert('Name and port required.'); return; }
+  const icon = pickedFileData || fIconUrl.value.trim() || null;
+  let apps = getApps();
+  if(editingId){
+    apps = apps.map(a => a.id === editingId ? {...a, name, port, icon} : a);
+  } else {
+    apps.push({ id: Date.now().toString(), name, port, icon });
+  }
+  saveApps(apps);
+  safeBack();
+  renderApps();
+};
+btnDelete.onclick = () => {
+  if(editingId){ deleteApp(editingId); }
+  safeBack();
+};
+
+function safePush(state, hash){
+  try{ history.pushState(state, '', hash); }catch(e){}
+}
+function safeReplace(state, hash){
+  try{ history.replaceState(state, '', hash); }catch(e){}
+}
+function safeBack(){
+  try{ history.back(); }catch(e){}
+}
+let modalOpenViaHistory = false;
+function openModalWithHistory(app){
+  openModal(app);
+  safePush({ screen: 'modal' }, location.hash || '#modal');
+}
+window.addEventListener('popstate', (e) => {
+  const state = e.state;
+  if(overlay.classList.contains('active')){
+    closeModal();
+    return;
+  }
+  if(!state || state.screen === 'mode'){
+    showScreen(modeScreen);
+  } else if(state.screen === 'main'){
+    selectMode(state.mode, true);
+  }
+});
+
+// Always reset to mode-select on open/reload
+safeReplace({ screen: 'mode' }, '#mode');
+showScreen(modeScreen);
+</script>
+</body>
+</html>
