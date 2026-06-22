@@ -210,7 +210,7 @@ function selectMode(mode, fromPopstate){
   showScreen(mainScreen);
   renderApps();
   if(!fromPopstate){
-    safePush({ screen: 'main', mode }, '#' + mode);
+    safePush({ screen: 'main', mode });
   }
 }
 
@@ -312,6 +312,15 @@ document.getElementById('btnAdd').onclick = () => openModalWithHistory(null);
 
 // Modal logic
 const overlay = document.getElementById('modal-overlay');
+overlay.addEventListener('click', (e) => {
+  if(e.target === overlay){
+    closeModal();
+
+    if(history.state?.screen === 'modal'){
+      history.back();
+    }
+  }
+});
 const fName = document.getElementById('fName');
 const fPort = document.getElementById('fPort');
 const fIconUrl = document.getElementById('fIconUrl');
@@ -339,8 +348,16 @@ function openModal(app){
 }
 function closeModal(){
   overlay.classList.remove('active');
+  editingId = null;
+  pickedFileData = null;
 }
-document.getElementById('btnCancel').onclick = () => safeBack();
+document.getElementById('btnCancel').onclick = () => {
+  closeModal();
+
+  if(history.state?.screen === 'modal'){
+    history.back();
+  }
+};
 document.getElementById('btnPickFile').onclick = () => fIconFile.click();
 fIconFile.onchange = () => {
   const file = fIconFile.files[0];
@@ -372,49 +389,68 @@ document.getElementById('btnSave').onclick = () => {
     apps.push({ id: Date.now().toString(), name, port, icon });
   }
   saveApps(apps);
-  safeBack();
-  renderApps();
+renderApps();
+closeModal();
+
+if(history.state?.screen === 'modal'){
+  history.back();
+}
 };
 btnDelete.onclick = () => {
-  if(editingId){ deleteApp(editingId); }
-  safeBack();
+  if(editingId){
+    deleteApp(editingId);
+  }
+
+  closeModal();
+
+  if(history.state?.screen === 'modal'){
+    history.back();
+  }
 };
 
-let internalNav = false;
-function safePush(state, hash){
+function safePush(state){
   try{
-    internalNav = true;
-    location.hash = hash;
-    history.replaceState(state, '', hash);
-  }catch(e){ internalNav = false; }
+    history.pushState(state, '');
+  }catch(e){}
 }
-function safeReplace(state, hash){
-  try{ history.replaceState(state, '', hash); }catch(e){}
+
+function safeReplace(state){
+  try{
+    history.replaceState(state, '');
+  }catch(e){}
 }
+
 function safeBack(){
-  try{ history.back(); }catch(e){}
+  try{
+    history.back();
+  }catch(e){}
 }
-let modalOpenViaHistory = false;
 function openModalWithHistory(app){
   openModal(app);
-  safePush({ screen: 'modal' }, location.hash || '#modal');
+  safePush({
+    screen: 'modal',
+    mode: window.currentMode,
+    editingId: app ? app.id : null
+  });
 }
 window.addEventListener('popstate', (e) => {
-  if(internalNav){ internalNav = false; return; }
   const state = e.state;
-  if(overlay.classList.contains('active')){
-    closeModal();
-    return;
-  }
+
+  closeModal();
+
   if(!state || state.screen === 'mode'){
     showScreen(modeScreen);
-  } else if(state.screen === 'main'){
+    return;
+  }
+
+  if(state.screen === 'main'){
     selectMode(state.mode, true);
+    return;
   }
 });
 
 // Always reset to mode-select on open/reload
-safeReplace({ screen: 'mode' }, '#mode');
+safeReplace({ screen: 'mode' });
 showScreen(modeScreen);
 </script>
 </body>
